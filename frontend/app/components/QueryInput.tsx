@@ -61,7 +61,7 @@ export const QueryInput = () => {
         <Button
           isIconOnly
           radius="full"
-          className="bg-transparent text-white transition ml-3 mt-1"
+          className="bg-transparent text-white transition ml-3 mt-1 hover:bg-zinc-800 hover:scale-110"
         >
           <ArrowRight size={22} />
         </Button>

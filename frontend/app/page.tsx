@@ -6,7 +6,7 @@ import Main from "./main/main";
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-[#141315] p-4 gap-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-[#141315] gap-4">
       <Main />
     </div>
   );

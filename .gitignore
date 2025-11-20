@@ -38,3 +38,21 @@ next-env.d.ts
 # filepath: .gitignore
 .next/
 node_modules/
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc

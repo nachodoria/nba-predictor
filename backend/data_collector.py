@@ -29,3 +29,21 @@ class NBADataCollector:
 
         return games
     
+    #Get team's stats aka Metadata
+    def get_teams_stats(self, games_df):   
+        team_stats = [] #Create empty list to store data
+
+        #Loop through every team in dataset
+        for team_id in games_df['TEAM_ID'].unique():
+            team_games = games_df[games_df['TEAM_ID'] == team_id].sort_values('GAME_DATE') #Sort by date
+            #Creates a 10 game average 
+            team_games['AVG_PTS'] = team_games['PTS'].rolling(10, min_periods=1).mean() 
+            team_games['AVG_FG_PCT'] = team_games['FG_PCT'].rolling(10, min_periods=1).mean()
+            team_games['AVG_REB'] = team_games['REB'].rolling(10, min_periods=1).mean() 
+            team_games['AVG_AST'] = team_games['AST'].rolling(10, min_periods=1).mean()
+
+            team_stats.append(team_games)
+        
+        return pd.concat(team_stats) #Combines all team data into one data frame 
+
+        

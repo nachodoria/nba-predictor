@@ -37,13 +37,24 @@ class NBADataCollector:
         for team_id in games_df['TEAM_ID'].unique():
             team_games = games_df[games_df['TEAM_ID'] == team_id].sort_values('GAME_DATE') #Sort by date
             #Creates a 10 game average 
-            team_games['AVG_PTS'] = team_games['PTS'].rolling(10, min_periods=1).mean() 
-            team_games['AVG_FG_PCT'] = team_games['FG_PCT'].rolling(10, min_periods=1).mean()
-            team_games['AVG_REB'] = team_games['REB'].rolling(10, min_periods=1).mean() 
-            team_games['AVG_AST'] = team_games['AST'].rolling(10, min_periods=1).mean()
+            team_games['AVG_PTS'] = round(team_games['PTS'].rolling(10, min_periods=1).mean(), 1)
+            team_games['AVG_FG_PCT'] = round(team_games['FG_PCT'].rolling(10, min_periods=1).mean(), 1)
+            team_games['AVG_REB'] = round(team_games['REB'].rolling(10, min_periods=1).mean(), 1)
+            team_games['AVG_AST'] = round(team_games['AST'].rolling(10, min_periods=1).mean(), 1)
 
             team_stats.append(team_games)
         
         return pd.concat(team_stats) #Combines all team data into one data frame 
 
-        
+    #Save data into csv file
+    def save_data(self, df, filename="../nba-predictor/nba_games.csv"):
+        df.to_csv(filename,index=False);
+        print(f"Saved {len(df)} games to {filename}")
+    
+if __name__ == '__main__':
+    collector = NBADataCollector()
+    games = collector.collect_game_data()
+    games_with_stats = collector.get_teams_stats(games)
+    collector.save_data(games_with_stats)
+
+    

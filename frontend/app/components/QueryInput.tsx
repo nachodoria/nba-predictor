@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Textarea, Button } from "@heroui/react";
-import { ArrowRight, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface QueryInputProps {
@@ -15,45 +15,76 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
   const [focused, setFocused] = useState(false);
   const [value, setValue] = useState("");
   const [baseHeight, setBaseHeight] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSend = () => {
-    if (!value.trim()) return;
+  const handleSend = async () => {
+    if (!value.trim() || loading) return;
 
+    const message = value.trim();
+    setValue(""); // Clear input immediately
+    
     if (onSend) {
-      onSend(value.trim());
-      setValue("");
+      // If onSend prop provided, use it (for chat page)
+      onSend(message);
     } else {
-      router.push(`/chat?msg=${encodeURIComponent(value.trim())}`);
+      // Otherwise navigate to chat page (for home page)
+      setLoading(true);
+      try {
+        const response = await fetch('http://localhost:5000/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: message })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          router.push(`/chat?query=${encodeURIComponent(message)}&response=${encodeURIComponent(data.response)}`);
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        alert('Failed to connect to the prediction service. Make sure the backend is running on port 5000.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
-  // Make the Textarea grow depending on text size
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
+    
     if (baseHeight === null) {
-      const initial = el.scrollHeight;
-      setBaseHeight(initial);
-      el.style.height = initial + "px";
-      return;
+      setBaseHeight(el.scrollHeight);
     }
+    
     if (value === "") {
-      el.style.height = baseHeight + "px";
-      return;
+      el.style.height = `${baseHeight}px`;
     }
-    if (el.scrollHeight > baseHeight) {
-      el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    
+    if (el.scrollHeight > (baseHeight || 0)) {
+      el.style.height = `${el.scrollHeight}px`;
     } else {
-      el.style.height = baseHeight + "px";
+      el.style.height = `${baseHeight}px`;
     }
   }, [value, baseHeight]);
-
 
   return (
     <div
       className={`
-        flex items-center w-full rounded-[24px] p-2 pl-4 bg-zinc-900/80 border border-white/10 backdrop-blur-sm transition-all duration-300
-        ${focused ? "border-neon-blue/50 shadow-[0_0_15px_rgba(0,240,255,0.1)]" : "hover:border-white/20"}
+        flex items-start w-full rounded-xl p-5 
+        border border-zinc-800 transition-colors
+        hover:border-zinc-700
+        ${focused ? "border-zinc-600" : ""}
       `}
       onClick={() => textareaRef.current?.focus()}
     >
@@ -63,39 +94,28 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
         onValueChange={setValue}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-          }
-        }}
+        onKeyDown={handleKeyDown}
+        disabled={loading || isLoading}
         minRows={1}
-        placeholder="Ask a prediction... (e.g., 'Who wins Lakers vs Celtics tonight?')"
-        className="w-full text-white bg-transparent resize-none overflow-hidden"
+        maxRows={6}
+        placeholder="Ask about NBA predictions..."
+        className="w-full text-white resize-none"
         classNames={{
-          inputWrapper:
-            "bg-transparent shadow-none outline-none border-none p-0 h-auto min-h-0 flex items-center",
-          innerWrapper: "bg-transparent h-auto flex items-center",
-          input:
-            "text-white placeholder:text-zinc-500 bg-transparent outline-none p-0 m-0 leading-[2.4] h-auto",
+          inputWrapper: "bg-transparent shadow-none outline-none ring-0 border-none p-0",
+          input: "text-white placeholder:text-zinc-400 bg-transparent outline-none",
+          innerWrapper: "bg-transparent",
         }}
-
       />
-
 
       <Button
         isIconOnly
         radius="full"
-        className={`
-          min-w-10 w-10 h-10 ml-2 transition-all duration-300 flex items-center
-          ${value.trim()
-            ? "bg-gradient-to-r from-neon-blue to-neon-purple text-white shadow-lg shadow-neon-blue/20"
-            : "bg-zinc-800 text-zinc-500"}
-        `}
+        isLoading={loading || isLoading}
+        disabled={!value.trim() || loading || isLoading}
         onPress={handleSend}
-        disabled={!value.trim() || isLoading}
+        className="bg-transparent text-white transition ml-3 mt-1 hover:bg-zinc-800 hover:scale-110 disabled:opacity-50"
       >
-        <ArrowRight size={20} />
+        <ArrowRight size={22} />
       </Button>
     </div>
   );

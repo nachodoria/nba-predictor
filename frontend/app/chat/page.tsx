@@ -1,101 +1,151 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { QueryInput } from "../components/QueryInput";
-import { ChatMessage } from "../components/ChatMessage";
+import { Spinner } from "@heroui/react";
 
-interface Message {
-  id: string;
-  text: string;
-  isUser: boolean;
-}
-
-export default function ChatPage() {
-  const params = useSearchParams();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const initialized = useRef(false);
+function ChatContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const initialQuery = searchParams.get("query");
+  const initialResponse = searchParams.get("response");
+  
+  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const initialMsg = params.get("msg");
-    if (initialMsg) {
-      const userMsg: Message = {
-        id: Date.now().toString(),
-        text: initialMsg,
-        isUser: true,
-      };
-      setMessages([userMsg]);
-      setIsTyping(true);
-
-      // Simulate AI response
-      setTimeout(() => {
-        const aiMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          text: "Let's analyze the stats for tonight and predict the performance of the team...",
-          isUser: false,
-        };
-        setMessages((prev) => [...prev, aiMsg]);
-        setIsTyping(false);
-      }, 1500);
+    if (initialQuery && initialResponse) {
+      setMessages([
+        { role: "user", content: initialQuery },
+        { role: "assistant", content: initialResponse }
+      ]);
     }
-  }, [params]);
+  }, [initialQuery, initialResponse]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-  const handleSendMessage = (text: string) => {
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      text,
-      isUser: true,
-    };
-    setMessages((prev) => [...prev, userMsg]);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "I'm analyzing the latest data for you. This might take a moment...",
-        isUser: false,
-      };
-      setMessages((prev) => [...prev, aiMsg]);
-      setIsTyping(false);
-    }, 2000);
+  const handleSendMessage = async (message: string) => {
+    // Add user message
+    setMessages(prev => [...prev, { role: "user", content: message }]);
+    setIsLoading(true);
+    
+    try {
+      const res = await fetch('http://localhost:5000/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: message })
+      });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        // Add assistant response
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: data.response 
+        }]);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: "assistant", 
+          content: "❌ Sorry, I encountered an error: " + data.error 
+        }]);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "❌ Failed to connect to the prediction service. Make sure the backend is running on port 5000." 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <main className="flex flex-col h-screen bg-[#0A0A0A] text-white overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex flex-col">
+      {/* Header */}
+      <div className="border-b border-zinc-800 p-4 bg-zinc-950">
+        <div className="max-w-4xl mx-auto flex items-center">
+          <button 
+            onClick={() => router.push('/')}
+            className="text-zinc-400 hover:text-white mr-4 transition"
+          >
+            ← Back
+          </button>
+          <div>
+            <h1 className="text-xl font-bold">NBA Prediction Chat</h1>
+            <p className="text-xs text-zinc-500">Powered by Gemini AI</p>
+          </div>
+        </div>
+      </div>
 
-      {/* SCROLLABLE CHAT AREA */}
-      <div className="flex-grow overflow-y-auto p-4 md:p-8 scrollbar-hide">
-        <div className="max-w-3xl mx-auto flex flex-col pt-4">
-          {messages.map((msg) => (
-            <ChatMessage key={msg.id} message={msg.text} isUser={msg.isUser} />
-          ))}
-
-          {isTyping && (
-            <ChatMessage
-              message="AI is thinking..."
-              isUser={false}
-            />
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-4xl mx-auto space-y-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-zinc-500 mt-20">
+              <p className="text-lg mb-2">👋 Start a conversation</p>
+              <p className="text-sm">Ask me about NBA predictions, team stats, or matchups!</p>
+            </div>
+          ) : (
+            messages.map((msg, idx) => (
+              <div 
+                key={idx}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+              >
+                <div 
+                  className={`rounded-2xl p-4 max-w-[85%] md:max-w-2xl ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-zinc-900 border border-zinc-800 text-white'
+                  }`}
+                >
+                  <p className="text-xs opacity-70 mb-2 font-semibold">
+                    {msg.role === 'user' ? '👤 You' : '🤖 AI Assistant'}
+                  </p>
+                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                </div>
+              </div>
+            ))
           )}
-
-          <div ref={bottomRef} />
+          
+          {isLoading && (
+            <div className="flex justify-start animate-in fade-in">
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" color="primary" />
+                  <p className="text-sm text-zinc-400">AI is thinking...</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* FIXED INPUT BAR AT BOTTOM */}
-      <div className="w-full pb-8 pt-4 px-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent">
-        <div className="max-w-3xl mx-auto">
-          <QueryInput onSend={handleSendMessage} isLoading={isTyping} />
+      {/* Input Box at Bottom */}
+      <div className="border-t border-zinc-800 p-4 bg-zinc-950">
+        <div className="max-w-4xl mx-auto">
+          <QueryInput onSend={handleSendMessage} isLoading={isLoading} />
         </div>
       </div>
-    </main>
+    </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <Spinner size="lg" color="primary" />
+      </div>
+    }>
+      <ChatContent />
+    </Suspense>
   );
 }

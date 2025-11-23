@@ -75,12 +75,12 @@ class NBAPredictor:
             'loss_probability': float(probability[0])
         }
     
-    def save_model(self, filepath='nba_model.pkl'):
+    def save_model(self, filepath='../nba_model.pkl'):
         """Save trained model"""
         joblib.dump(self.model, filepath) # replaces old model with newest trained model
         print(f"Model saved to {filepath}")
     
-    def load_model(self, filepath='nba_model.pkl'):
+    def load_model(self, filepath='../nba_model.pkl'):
         """Load trained model"""
         if os.path.exists(filepath):
             self.model = joblib.load(filepath)

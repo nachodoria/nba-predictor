@@ -26,7 +26,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative min-h-screen min-w-full bg-[#0a0a0a] flex flex-col m-0">
+    <main className="relative min-h-screen min-w-full bg-zinc-900 flex flex-col m-0">
 
       {/* KBD TOP RIGHT */}
       <div className="absolute top-8 right-8">

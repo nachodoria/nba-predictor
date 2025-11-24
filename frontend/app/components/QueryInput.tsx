@@ -23,7 +23,7 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
 
     const message = value.trim();
     setValue(""); // Clear input immediately
-    
+
     if (onSend) {
       // If onSend prop provided, use it (for chat page)
       onSend(message);
@@ -36,9 +36,9 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ query: message })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
           router.push(`/chat?query=${encodeURIComponent(message)}&response=${encodeURIComponent(data.response)}`);
         } else {
@@ -62,15 +62,15 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
   useEffect(() => {
     const el = textareaRef.current;
     if (!el) return;
-    
+
     if (baseHeight === null) {
       setBaseHeight(el.scrollHeight);
     }
-    
+
     if (value === "") {
       el.style.height = `${baseHeight}px`;
     }
-    
+
     if (el.scrollHeight > (baseHeight || 0)) {
       el.style.height = `${el.scrollHeight}px`;
     } else {
@@ -83,7 +83,7 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
       className={`
         flex items-start w-full rounded-xl p-5 
         border border-zinc-800 transition-colors
-        hover:border-zinc-700
+        hover:border-zinc-700 bg-[#26282a] 
         ${focused ? "border-zinc-600" : ""}
       `}
       onClick={() => textareaRef.current?.focus()}
@@ -101,9 +101,9 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
         placeholder="Ask about NBA predictions..."
         className="w-full text-white resize-none"
         classNames={{
-          inputWrapper: "bg-transparent shadow-none outline-none ring-0 border-none p-0",
-          input: "text-white placeholder:text-zinc-400 bg-transparent outline-none",
-          innerWrapper: "bg-transparent",
+          inputWrapper: "bg-[#26282a] shadow-none outline-none ring-0 border-none p-0",
+          input: "text-white placeholder:text-zinc-400 bg-[#26282a] outline-none",
+          innerWrapper: "bg-[#26282a]",
         }}
       />
 
@@ -113,7 +113,7 @@ export const QueryInput = ({ onSend, isLoading }: QueryInputProps) => {
         isLoading={loading || isLoading}
         disabled={!value.trim() || loading || isLoading}
         onPress={handleSend}
-        className="bg-transparent text-white transition ml-3 mt-1 hover:bg-zinc-800 hover:scale-110 disabled:opacity-50"
+        className="bg-[#26282a]  text-white transition ml-3 mt-1 hover:bg-zinc-800 hover:scale-110 disabled:opacity-50"
       >
         <ArrowRight size={22} />
       </Button>

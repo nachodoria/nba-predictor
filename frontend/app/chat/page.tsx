@@ -9,10 +9,10 @@ function ChatContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const initialQuery = searchParams.get("query");
   const initialResponse = searchParams.get("response");
-  
+
   const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,32 +33,32 @@ function ChatContent() {
     // Add user message
     setMessages(prev => [...prev, { role: "user", content: message }]);
     setIsLoading(true);
-    
+
     try {
       const res = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: message })
       });
-      
+
       const data = await res.json();
-      
+
       if (data.success) {
         // Add assistant response
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: data.response 
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: data.response
         }]);
       } else {
-        setMessages(prev => [...prev, { 
-          role: "assistant", 
-          content: "❌ Sorry, I encountered an error: " + data.error 
+        setMessages(prev => [...prev, {
+          role: "assistant",
+          content: "❌ Sorry, I encountered an error: " + data.error
         }]);
       }
     } catch (error) {
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "❌ Failed to connect to the prediction service. Make sure the backend is running on port 5000." 
+      setMessages(prev => [...prev, {
+        role: "assistant",
+        content: "❌ Failed to connect to the prediction service. Make sure the backend is running on port 5000."
       }]);
     } finally {
       setIsLoading(false);
@@ -66,11 +66,11 @@ function ChatContent() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="min-h-screen bg-zinc-900 text-white flex flex-col bg-zinc-900 ">
       {/* Header */}
-      <div className="border-b border-zinc-800 p-4 bg-zinc-950">
+      <div className="border-b border-zinc-800 p-4 bg-zinc-900">
         <div className="max-w-4xl mx-auto flex items-center">
-          <button 
+          <button
             onClick={() => router.push('/')}
             className="text-zinc-400 hover:text-white mr-4 transition"
           >
@@ -93,16 +93,15 @@ function ChatContent() {
             </div>
           ) : (
             messages.map((msg, idx) => (
-              <div 
+              <div
                 key={idx}
                 className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
               >
-                <div 
-                  className={`rounded-2xl p-4 max-w-[85%] md:max-w-2xl ${
-                    msg.role === 'user' 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-zinc-900 border border-zinc-800 text-white'
-                  }`}
+                <div
+                  className={`rounded-2xl p-4 max-w-[85%] md:max-w-2xl ${msg.role === 'user'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-zinc-900 border border-zinc-800 text-white'
+                    }`}
                 >
                   <p className="text-xs opacity-70 mb-2 font-semibold">
                     {msg.role === 'user' ? '👤 You' : '🤖 AI Assistant'}
@@ -112,7 +111,7 @@ function ChatContent() {
               </div>
             ))
           )}
-          
+
           {isLoading && (
             <div className="flex justify-start animate-in fade-in">
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
@@ -123,13 +122,13 @@ function ChatContent() {
               </div>
             </div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input Box at Bottom */}
-      <div className="border-t border-zinc-800 p-4 bg-zinc-950">
+      <div className="border-t border-zinc-800 p-4 bg-[#26282a]/10  ">
         <div className="max-w-4xl mx-auto">
           <QueryInput onSend={handleSendMessage} isLoading={isLoading} />
         </div>

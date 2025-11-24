@@ -1,43 +1,61 @@
 #   Collect data from nba_api
 #   Link to API: https://github.com/swar/nba_api
 
-from nba_api.stats.endpoints import leaguegamefinder, teamestimatedmetrics
+from nba_api.stats.endpoints import leaguegamefinder, teamestimatedmetrics, scoreboardv2
 from nba_api.stats.static import teams
 import pandas as pd
 from datetime import datetime
-
-
-def get_current_nba_season() -> str:
-    """Determine current NBA season based on today's date."""
-    now = datetime.now()
-    year = now.year
-    month = now.month
-    if month >= 10:  # October or later
-        return f"{year}-{str(year + 1)[-2:]}"
-    else:  # January to September
-        return f"{year - 1}-{str(year)[-2:]}"
-
 
 class NBADataCollector:
     #Constructor: fetch teams metadata from nba_api static stats
     def __init__(self):
         self.teams = teams.get_teams()
+        self.teams_df = pd.DataFrame(self.teams)
 
-    # Collect game data for a specific season, defaults to current season
-    def collect_game_data(self, season=None):
-        if season is None:
-            season = get_current_nba_season()
+    # Get upcoming games for today
+    def get_upcoming_games(self):
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
         
-        print(f"Collecting data for {season} season... ")
+        # Get scoreboard for today
+        board = scoreboardv2.ScoreboardV2(game_date=today)
+        games = board.game_header.get_data_frame()
+        
+        upcoming = []
+        for _, game in games.iterrows():
+            home_team_id = game['HOME_TEAM_ID']
+            visitor_team_id = game['VISITOR_TEAM_ID']
+            
+            home_team = self.teams_df[self.teams_df['id'] == home_team_id]['full_name'].values[0]
+            visitor_team = self.teams_df[self.teams_df['id'] == visitor_team_id]['full_name'].values[0]
+            
+            upcoming.append({
+                'game_id': game['GAME_ID'],
+                'date': today,
+                'home_team': home_team,
+                'home_team_id': int(home_team_id),
+                'visitor_team': visitor_team,
+                'visitor_team_id': int(visitor_team_id)
+            })
+            
+        return upcoming
 
-        #Creates a LeagueGameFinder object that targets the specified regular season
-        gamefinder = leaguegamefinder.LeagueGameFinder(
-            season_nullable=season,
-            season_type_nullable="Regular Season"
-        )
+    # Collect game data for specific seasons
+    def collect_game_data(self, seasons=["2022-23", "2023-24", "2024-25"]):
+        all_games = []
         
-        
-        games = gamefinder.get_data_frames()[0] #Turns into a panda dataframe and [0] gets the game data
+        for season in seasons:
+            print(f"Collecting data for {season} season... ")
+            #Creates a LeagueGameFinder object that targets the specific regular season
+            gamefinder = leaguegamefinder.LeagueGameFinder(
+                season_nullable=season,
+                season_type_nullable="Regular Season"
+            )
+            season_games = gamefinder.get_data_frames()[0]
+            season_games['SEASON_ID'] = season
+            all_games.append(season_games)
+            
+        games = pd.concat(all_games, ignore_index=True)
         games['WIN'] = games['WL'].apply(lambda x: 1 if x == 'W' else 0) # New column: 1 if win else 0
         games['HOME'] = games['MATCHUP'].str.contains('vs.').astype(int) # If vs. that means it's home game, if it's @ that means it's away
 
@@ -61,7 +79,15 @@ class NBADataCollector:
         return pd.concat(team_stats) #Combines all team data into one data frame 
 
     #Save data into csv file
-    def save_data(self, df, filename="../nba_games.csv"):
+    def save_data(self, df, filename=None):
+        import os
+        if filename is None:
+            # Get directory containing this script (backend/)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to project root
+            project_root = os.path.dirname(current_dir)
+            filename = os.path.join(project_root, 'nba_games.csv')
+            
         df.to_csv(filename,index=False);
         print(f"Saved {len(df)} games to {filename}")
     
@@ -70,5 +96,3 @@ if __name__ == '__main__':
     games = collector.collect_game_data()
     games_with_stats = collector.get_teams_stats(games)
     collector.save_data(games_with_stats)
-
-    

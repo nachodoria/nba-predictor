@@ -338,19 +338,36 @@ def train_model():
             'error': str(e)
         }), 500
 
+@app.route('/api/upcoming-games', methods=['GET'])
+def upcoming_games():
+    """Get upcoming games"""
+    try:
+        collector = NBADataCollector()
+        games = collector.get_upcoming_games()
+        return jsonify({
+            'success': True,
+            'games': games
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/collect-data', methods=['POST'])
 def collect_data():
     """Collect latest NBA data"""
     try:
         collector = NBADataCollector()
-        games = collector.collect_game_data()
-        games_with_stats = collector.get_team_stats(games)
+        # Collect last 3 seasons
+        games = collector.collect_game_data(seasons=["2022-23", "2023-24", "2024-25"])
+        games_with_stats = collector.get_teams_stats(games)
         collector.save_data(games_with_stats)
         
         return jsonify({
             'success': True,
             'games_collected': len(games),
-            'message': 'Data collected successfully'
+            'message': 'Data collected successfully for seasons 2022-25'
         })
     except Exception as e:
         return jsonify({

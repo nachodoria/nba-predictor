@@ -16,17 +16,31 @@ class NBAPredictor:
         
     def prepare_features(self, df):
         """Prepare features for training"""
-        # Fill NaN values
-        df = df.fillna(df.mean(numeric_only=True))
+        # Sort by team and date to ensure correct shifting
+        df = df.sort_values(['TEAM_ID', 'GAME_DATE'])
+        
+        # Shift the average columns to use previous game's stats for prediction
+        avg_cols = ['AVG_PTS', 'AVG_FG_PCT', 'AVG_REB', 'AVG_AST']
+        df[avg_cols] = df.groupby('TEAM_ID')[avg_cols].shift(1)
+        
+        # Drop rows with NaN values (first game of each team)
+        df = df.dropna(subset=avg_cols)
         
         X = df[self.feature_columns] #Input data
         y = df['WIN'] # Output data
         
         return X, y
     
-    def train(self, data_path='../nba_games.csv'):
+    def train(self, data_path=None):
         """Train the model"""
-        print("Loading data...")
+        if data_path is None:
+            # Get directory containing this script (backend/)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            # Go up one level to project root
+            project_root = os.path.dirname(current_dir)
+            data_path = os.path.join(project_root, 'nba_games.csv')
+
+        print(f"Loading data from {data_path}...")
         df = pd.read_csv(data_path)
         
         print("Preparing features...")
@@ -75,18 +89,27 @@ class NBAPredictor:
             'loss_probability': float(probability[0])
         }
     
-    def save_model(self, filepath='../nba_model.pkl'):
+    def _get_model_path(self, filepath):
+        if filepath:
+            return filepath
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(current_dir)
+        return os.path.join(project_root, 'nba_model.pkl')
+
+    def save_model(self, filepath=None):        
         """Save trained model"""
-        joblib.dump(self.model, filepath) # replaces old model with newest trained model
-        print(f"Model saved to {filepath}")
+        path = self._get_model_path(filepath)
+        joblib.dump(self.model, path) # replaces old model with newest trained model
+        print(f"Model saved to {path}")
     
-    def load_model(self, filepath='../nba_model.pkl'):
+    def load_model(self, filepath=None):
         """Load trained model"""
-        if os.path.exists(filepath):
-            self.model = joblib.load(filepath)
+        path = self._get_model_path(filepath)
+        if os.path.exists(path):
+            self.model = joblib.load(path)
             print("Model loaded successfully")
         else:
-            raise FileNotFoundError("Model file not found. Train the model first.")
+            raise FileNotFoundError(f"Model file not found at {path}. Train the model first.")
 
 if __name__ == '__main__':
     predictor = NBAPredictor()

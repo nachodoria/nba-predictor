@@ -11,7 +11,7 @@ class NBAPredictor:
         self.model = None
         self.feature_columns = [
             'AVG_PTS', 'AVG_FG_PCT', 'AVG_REB', 'AVG_AST', 
-            'HOME', 'PLUS_MINUS'
+            'HOME'
         ]
         
     def prepare_features(self, df):
@@ -24,7 +24,7 @@ class NBAPredictor:
         
         return X, y
     
-    def train(self, data_path='../nba-predictor/nba_games.csv'):
+    def train(self, data_path='../nba_games.csv'):
         """Train the model"""
         print("Loading data...")
         df = pd.read_csv(data_path)

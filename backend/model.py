@@ -50,7 +50,7 @@ class NBAPredictor:
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.2, random_state=42
         )
-        
+         
         print("Training model...")
         self.model = RandomForestClassifier(
             n_estimators=200, # 200 decision trees

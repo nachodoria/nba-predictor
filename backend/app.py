@@ -31,7 +31,7 @@ else:
 # Load model if it exists
 try:
     predictor.load_model()
-    print("Model loaded successfully")
+    print("Model loaded successfully") 
 except FileNotFoundError:
     print("No trained model found. Please train the model first.")
 
@@ -94,28 +94,71 @@ def extract_player_names_from_query(query):
     
     return found_players[:2]  # Limit to 2 players
 
-def generate_gemini_response(query):
+import json
+
+def analyze_query_with_ai(query):
+    """Analyze user query intent using Gemini"""
+    try:
+        prompt = f"""Analyze this NBA user query and return a strict JSON object (no markdown formatting).
+        
+        Query: "{query}"
+        
+        Return JSON with this structure:
+        {{
+            "intent": "schedule" | "prediction" | "stats" | "standings" | "general",
+            "teams": ["Team A", "Team B"],
+            "players": ["Player Name"],
+            "is_temporal": boolean (true if asking about time/schedule/upcoming)
+        }}
+        
+        Examples:
+        "Lakers vs Warriors prediction" -> {{"intent": "prediction", "teams": ["Lakers", "Warriors"], "players": [], "is_temporal": false}}
+        "Who plays tonight?" -> {{"intent": "schedule", "teams": [], "players": [], "is_temporal": true}}
+        "LeBron stats" -> {{"intent": "stats", "teams": [], "players": ["LeBron James"], "is_temporal": false}}
+        """
+        
+        response = gemini_model.generate_content(prompt)
+        text = response.text.strip()
+        # Clean up any markdown code blocks if present
+        if text.startswith('```json'):
+            text = text[7:-3]
+        elif text.startswith('```'):
+            text = text[3:-3]
+            
+        return json.loads(text)
+    except Exception as e:
+        print(f"Error analyzing query: {e}")
+        # Fallback to basic extraction
+        return {
+            "intent": "general",
+            "teams": extract_teams_from_query(query),
+            "players": extract_player_names_from_query(query),
+            "is_temporal": any(word in query.lower() for word in ['tonight', 'today', 'upcoming', 'schedule', 'games'])
+        }
+
+def generate_gemini_response(query): 
     """Generate response using Gemini AI with real-time NBA data and ML predictions"""
     try:
-        # Extract team and player names from query
-        team_names = extract_teams_from_query(query)
-        player_names = extract_player_names_from_query(query)
+        # 1. Analyze intent with AI
+        analysis = analyze_query_with_ai(query)
         
-        # Detect temporal queries (tonight, today, etc.)
-        is_future_query = any(word in query.lower() for word in ['tonight', 'today', 'this evening', 'will', 'going to'])
+        team_names = analysis.get('teams', [])
+        player_names = analysis.get('players', [])
+        intent = analysis.get('intent', 'general')
+        is_future_query = analysis.get('is_temporal', False) or intent == 'schedule'
         
         # Gather relevant NBA data
         nba_context = ""
         ml_prediction_context = ""
         
-        # Check for today's games if temporal query
-        if is_future_query:
+        # 2. Handle Schedule/Upcoming Games
+        if is_future_query or intent == 'schedule':
             todays_games = nba_data_service.get_todays_games()
             
             if todays_games:
                 nba_context += nba_data_service.format_todays_games_for_prompt(todays_games)
                 
-                # If specific teams mentioned, check if they play today and predict
+                # Check for specific team predictions in today's games
                 if team_names:
                     for team_name in team_names[:2]:
                         team = nba_data_service.search_team_by_name(team_name)
@@ -124,18 +167,14 @@ def generate_gemini_response(query):
                             
                             if game_info:
                                 game, opponent = game_info
-                                
-                                # Determine if team is home or away
                                 is_home = game['home_team']['id'] == team['id']
                                 opponent_id = opponent['id']
                                 
-                                # Get stats for both teams
+                                # Get stats and predict
                                 team_stats = nba_data_service.get_team_stats(team['id'])
                                 opp_stats = nba_data_service.get_team_stats(opponent_id)
                                 
-                                # Prepare features for ML model
                                 if team_stats and opp_stats:
-                                    # Use team's stats as input
                                     model_input = {
                                         'AVG_PTS': team_stats.get('avg_pts', 0) / team_stats.get('games_played', 1),
                                         'AVG_FG_PCT': team_stats.get('avg_fg_pct', 0),
@@ -144,61 +183,48 @@ def generate_gemini_response(query):
                                         'HOME': 1 if is_home else 0
                                     }
                                     
-                                    # Get ML prediction
                                     prediction = predictor.predict_game(model_input)
                                     
-                                    # Format prediction context
                                     opp_name = f"{opponent['city']} {opponent['name']}"
                                     ml_prediction_context += f"\n\nML MODEL PREDICTION for {team['full_name']} vs {opp_name}:\n"
                                     ml_prediction_context += f"- Win Probability: {prediction['win_probability']:.1%}\n"
                                     ml_prediction_context += f"- Location: {'Home' if is_home else 'Away'}\n"
                                     
-                                    # Add team stats context
                                     nba_context += nba_data_service.format_team_stats_for_prompt(team_stats, team['full_name'])
                                     nba_context += nba_data_service.format_team_stats_for_prompt(opp_stats, opp_name)
-                                    
-                                    # Add recent games
-                                    recent_games = nba_data_service.get_team_recent_games(team['id'], n=100)
-                                    nba_context += nba_data_service.format_recent_games_for_prompt(recent_games, team['full_name'])
                             else:
                                 nba_context += f"\n{team['full_name']} does not have a game scheduled for today.\n"
             else:
                 nba_context += "\nNo NBA games scheduled for today.\n"
         
-        # For non-temporal queries or additional context
+        # 3. Handle General Team Stats/Info
         if team_names and not ml_prediction_context:
-            # Get team data for mentioned teams
-            for team_name in team_names[:2]:  # Limit to 2 teams
+            for team_name in team_names[:2]:
                 team = nba_data_service.search_team_by_name(team_name)
                 if team:
-                    # Get team stats
                     stats = nba_data_service.get_team_stats(team['id'])
                     nba_context += nba_data_service.format_team_stats_for_prompt(stats, team['full_name'])
                     
-                    # Get recent games
-                    recent_games = nba_data_service.get_team_recent_games(team['id'], n=100)
+                    recent_games = nba_data_service.get_team_recent_games(team['id'], n=5)
                     nba_context += nba_data_service.format_recent_games_for_prompt(recent_games, team['full_name'])
                     nba_context += "\n"
         
-        # Fetch player stats if players mentioned
+        # 4. Handle Player Stats
         if player_names:
             for player_name in player_names:
                 player = nba_data_service.search_player_by_name(player_name)
                 if player:
-                    # Get player stats
                     stats = nba_data_service.get_player_season_stats(player['id'])
                     nba_context += nba_data_service.format_player_stats_for_prompt(stats, player['full_name'])
                     
-                    # Get recent games
                     recent_games = nba_data_service.get_player_recent_games(player['id'], n=5)
                     nba_context += nba_data_service.format_player_recent_games_for_prompt(recent_games, player['full_name'])
                     nba_context += "\n"
         
-        # If no specific teams mentioned or for general queries, include standings
-        if not nba_context or any(word in query.lower() for word in ['standings', 'best', 'worst', 'top', 'league']):
+        # 5. Handle Standings (if explicitly asked or if context is empty)
+        if intent == 'standings' or (not nba_context and not ml_prediction_context):
             standings = nba_data_service.get_team_standings()
             if not standings.empty:
-                # Show top 5 teams from each conference
                 east = standings[standings['Conference'] == 'East'].head(5)
                 west = standings[standings['Conference'] == 'West'].head(5)
                 nba_context += "\nTop 5 Eastern Conference:\n"
@@ -206,7 +232,7 @@ def generate_gemini_response(query):
                 nba_context += "\nTop 5 Western Conference:\n"
                 nba_context += nba_data_service.format_standings_for_prompt(west)
         
-        # Create enhanced prompt with real NBA data and ML predictions
+        # Create enhanced prompt
         prompt = f"""You are an NBA prediction AI assistant with access to real-time NBA data and machine learning models.
 
 REAL-TIME NBA DATA:
@@ -214,15 +240,9 @@ REAL-TIME NBA DATA:
 
 {ml_prediction_context}
 
-Your capabilities:
-- Predict NBA game outcomes based on current team statistics
-- Analyze team performance metrics and recent form
-- Consider home court advantage, recent trends, and head-to-head records
-- Provide data-driven win probability estimates using ML models
-
 User query: {query}
 
-Provide a helpful, data-driven response using the real-time NBA data and ML predictions above. Reference specific stats, trends, and the ML model's prediction when available. Keep responses concise (3-4 sentences) and basketball-focused. If predicting a matchup, explain the key factors and the model's reasoning."""
+Provide a helpful, data-driven response using the real-time NBA data and ML predictions above. Reference specific stats, trends, and the ML model's prediction when available. Keep responses concise (3-4 sentences) and basketball-focused."""
 
         response = gemini_model.generate_content(prompt)
         return response.text
@@ -249,7 +269,7 @@ def process_query_fallback(query):
         return "Hi! I'm your NBA prediction assistant powered by AI. Ask me about any NBA matchup or team statistics!"
     
     else:
-        return "I can help predict NBA games! Try asking: 'Will the Lakers beat the Warriors?' or 'Predict Celtics vs Heat'"
+        return "Gemini might not be functioning as usual, try again later."
 
 def extract_teams(query):
     """Extract team names from query"""

@@ -6,6 +6,7 @@ import { Header } from "../components/Header";
 interface Game {
     game_id: string;
     date: string;
+    time: string;
     home_team: string;
     home_team_id: number;
     visitor_team: string;
@@ -101,8 +102,8 @@ export default function MatchupsPage() {
                                 </div>
 
                                 <div className="pt-4 border-t border-white/5 flex justify-center">
-                                    <span className="text-xs font-mono text-zinc-500 bg-zinc-900 px-3 py-1 rounded-full border border-white/5">
-                                        {game.date}
+                                    <span className="text-sm font-mono text-neon-blue bg-zinc-900/80 px-4 py-1.5 rounded-full border border-neon-blue/20">
+                                        {game.time}
                                     </span>
                                 </div>
                             </div>

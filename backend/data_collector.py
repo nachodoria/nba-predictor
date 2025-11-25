@@ -32,6 +32,7 @@ class NBADataCollector:
             upcoming.append({
                 'game_id': game['GAME_ID'],
                 'date': today,
+                'time': game['GAME_STATUS_TEXT'],
                 'home_team': home_team,
                 'home_team_id': int(home_team_id),
                 'visitor_team': visitor_team,

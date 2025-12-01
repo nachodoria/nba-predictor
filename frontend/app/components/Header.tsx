@@ -8,8 +8,11 @@ export const Header = () => {
                         NBA <span className="font-light text-white/60">Predictor</span>
                     </h1>
                 </div>
-                {/* Placeholder for future nav or user profile */}
-                <div className="w-8 h-8 rounded-full bg-white/5" />
+                <nav className="flex items-center gap-6">
+                    <a href="/" className="text-sm text-zinc-400 hover:text-white transition-colors">Chat</a>
+                    <a href="/matchups" className="text-sm text-zinc-400 hover:text-white transition-colors">Matchups</a>
+                    <div className="w-8 h-8 rounded-full bg-white/5 ml-2" />
+                </nav>
             </div>
         </header>
     );

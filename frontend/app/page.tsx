@@ -6,6 +6,8 @@ import { LoadingScreen } from "./components/LoadingScreen";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Header } from "./components/Header";
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -34,11 +36,13 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-zinc-900 flex flex-col items-center justify-center p-8">
-      {isLoading && <LoadingScreen />}
+    <main className="min-h-screen bg-zinc-900 flex flex-col items-center">
+      <Header />
 
-      <div className="w-full max-w-3xl">
-        {/* Header */}
+      <div className="w-full max-w-3xl p-8 flex flex-col items-center justify-center flex-1">
+        {isLoading && <LoadingScreen />}
+
+        {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-white mb-4">
             NBA Prediction AI
@@ -55,7 +59,7 @@ export default function Home() {
         <RotatingQueries />
 
         {/* Input Box */}
-        <div className="mt-8">
+        <div className="mt-8 w-full">
           <QueryInput onSend={handleQuerySubmit} isLoading={isLoading} />
         </div>
 

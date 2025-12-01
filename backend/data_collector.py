@@ -71,9 +71,15 @@ class NBADataCollector:
             team_games = games_df[games_df['TEAM_ID'] == team_id].sort_values('GAME_DATE') #Sort by date
             #Creates a 10 game average 
             team_games['AVG_PTS'] = round(team_games['PTS'].rolling(10, min_periods=1).mean().shift(1), 1)
-            team_games['AVG_FG_PCT'] = round(team_games['FG_PCT'].rolling(10, min_periods=1).mean().shift(1), 1)
+            team_games['AVG_FG_PCT'] = round(team_games['FG_PCT'].rolling(10, min_periods=1).mean().shift(1), 3)
+            team_games['AVG_FG3_PCT'] = round(team_games['FG3_PCT'].rolling(10, min_periods=1).mean().shift(1), 3)
+            team_games['AVG_FT_PCT'] = round(team_games['FT_PCT'].rolling(10, min_periods=1).mean().shift(1), 3)
             team_games['AVG_REB'] = round(team_games['REB'].rolling(10, min_periods=1).mean().shift(1), 1)
             team_games['AVG_AST'] = round(team_games['AST'].rolling(10, min_periods=1).mean().shift(1), 1)
+            team_games['AVG_STL'] = round(team_games['STL'].rolling(10, min_periods=1).mean().shift(1), 1)
+            team_games['AVG_BLK'] = round(team_games['BLK'].rolling(10, min_periods=1).mean().shift(1), 1)
+            team_games['AVG_TOV'] = round(team_games['TOV'].rolling(10, min_periods=1).mean().shift(1), 1)
+            team_games['AVG_PLUS_MINUS'] = round(team_games['PLUS_MINUS'].rolling(10, min_periods=1).mean().shift(1), 1)
 
             team_stats.append(team_games)
         

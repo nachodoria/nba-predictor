@@ -292,11 +292,24 @@ class NBADataService:
                 'avg_stl': stats.get('STL', 0),
                 'avg_blk': stats.get('BLK', 0),
                 'avg_tov': stats.get('TOV', 0),
-                'plus_minus': stats.get('PLUS_MINUS', 0)
+                'plus_minus': stats.get('PLUS_MINUS', 0),
+                'streak': self._get_team_streak(team_id, season)
             }
         except Exception as e:
             print(f"Error fetching team stats for team {team_id}: {e}")
             return {}
+
+    def _get_team_streak(self, team_id: int, season: str = None) -> str:
+        """Helper to get just the streak for a team"""
+        try:
+            standings = self.get_team_standings(season)
+            if not standings.empty:
+                team_data = standings[standings['TeamID'] == team_id]
+                if not team_data.empty:
+                    return team_data.iloc[0]['strCurrentStreak']
+            return "N/A"
+        except:
+            return "N/A"
     
     def get_matchup_history(self, team1_id: int, team2_id: int, n: int = 5, season: str = None) -> pd.DataFrame:
         """
@@ -498,6 +511,7 @@ class NBADataService:
         output += f"- Assists: {stats.get('avg_ast', 0):.1f} APG\n"
         output += f"- Steals: {stats.get('avg_stl', 0):.1f} SPG\n"
         output += f"- Blocks: {stats.get('avg_blk', 0):.1f} BPG\n"
+        output += f"- Current Streak: {stats.get('streak', 'N/A')}\n"
         
         return output
     

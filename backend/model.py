@@ -10,8 +10,9 @@ class NBAPredictor:
     def __init__(self):
         self.model = None
         self.feature_columns = [
-            'AVG_PTS', 'AVG_FG_PCT', 'AVG_REB', 'AVG_AST', 
-            'HOME'
+            'AVG_PTS', 'AVG_FG_PCT', 'AVG_FG3_PCT', 'AVG_FT_PCT', 
+            'AVG_REB', 'AVG_AST', 'AVG_STL', 'AVG_BLK', 'AVG_TOV', 
+            'AVG_PLUS_MINUS', 'HOME'
         ]
         
     def prepare_features(self, df):
@@ -20,7 +21,12 @@ class NBAPredictor:
         df = df.sort_values(['TEAM_ID', 'GAME_DATE'])
         
         # Shift the average columns to use previous game's stats for prediction
-        avg_cols = ['AVG_PTS', 'AVG_FG_PCT', 'AVG_REB', 'AVG_AST']
+        # Shift the average columns to use previous game's stats for prediction
+        avg_cols = [
+            'AVG_PTS', 'AVG_FG_PCT', 'AVG_FG3_PCT', 'AVG_FT_PCT', 
+            'AVG_REB', 'AVG_AST', 'AVG_STL', 'AVG_BLK', 'AVG_TOV', 
+            'AVG_PLUS_MINUS'
+        ]
         df[avg_cols] = df.groupby('TEAM_ID')[avg_cols].shift(1)
         
         # Drop rows with NaN values (first game of each team)

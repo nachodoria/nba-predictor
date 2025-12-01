@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 import google.generativeai as genai
 import re
+import json
 
 # Load environment variables
 load_dotenv()
@@ -84,7 +85,6 @@ def extract_player_names_from_query(query):
             found_players.append(player)
     
     # Also check for first/last name patterns (2-3 consecutive capitalized words)
-    import re
     # Match patterns like "Scottie Barnes" or "LeBron James"
     name_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\b'
     matches = re.findall(name_pattern, query)
@@ -93,8 +93,6 @@ def extract_player_names_from_query(query):
             found_players.append(match)
     
     return found_players[:2]  # Limit to 2 players
-
-import json
 
 def analyze_query_with_ai(query):
     """Analyze user query intent using Gemini"""
@@ -205,7 +203,7 @@ def generate_gemini_response(query):
                     stats = nba_data_service.get_team_stats(team['id'])
                     nba_context += nba_data_service.format_team_stats_for_prompt(stats, team['full_name'])
                     
-                    recent_games = nba_data_service.get_team_recent_games(team['id'], n=5)
+                    recent_games = nba_data_service.get_team_recent_games(team['id'], n=10)
                     nba_context += nba_data_service.format_recent_games_for_prompt(recent_games, team['full_name'])
                     nba_context += "\n"
         
@@ -217,7 +215,7 @@ def generate_gemini_response(query):
                     stats = nba_data_service.get_player_season_stats(player['id'])
                     nba_context += nba_data_service.format_player_stats_for_prompt(stats, player['full_name'])
                     
-                    recent_games = nba_data_service.get_player_recent_games(player['id'], n=5)
+                    recent_games = nba_data_service.get_player_recent_games(player['id'], n=10)
                     nba_context += nba_data_service.format_player_recent_games_for_prompt(recent_games, player['full_name'])
                     nba_context += "\n"
         
